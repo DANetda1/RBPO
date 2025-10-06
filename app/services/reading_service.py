@@ -1,6 +1,11 @@
 from typing import Dict, List, Optional
 
-from app.schemas.reading import ReadingItem, ReadingItemCreate, ReadingItemUpdate, Status
+from app.schemas.reading import (
+    ReadingItem,
+    ReadingItemCreate,
+    ReadingItemUpdate,
+    Status,
+)
 
 _DB: Dict[int, ReadingItem] = {}
 _SEQ: int = 0

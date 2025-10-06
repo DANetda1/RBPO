@@ -2,7 +2,12 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
 
-from app.schemas.reading import ReadingItem, ReadingItemCreate, ReadingItemUpdate, Status
+from app.schemas.reading import (
+    ReadingItem,
+    ReadingItemCreate,
+    ReadingItemUpdate,
+    Status,
+)
 from app.services.reading_service import create_item as svc_create
 from app.services.reading_service import delete_item as svc_delete
 from app.services.reading_service import get_item as svc_get
@@ -18,7 +23,9 @@ def create_item(payload: ReadingItemCreate):
 
 
 @router.get("", response_model=List[ReadingItem])
-def list_items(status: Optional[Status] = None, tag: Optional[str] = None, q: Optional[str] = None):
+def list_items(
+    status: Optional[Status] = None, tag: Optional[str] = None, q: Optional[str] = None
+):
     return svc_list(status, tag, q)
 
 
