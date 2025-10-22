@@ -1,11 +1,16 @@
+from uuid import uuid4
+
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.reading import router as reading_router
+from app.settings import get_settings
 
 app = FastAPI(title="SecDev Course App", version="0.1.0")
+settings = get_settings()
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -18,7 +23,62 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class CorrelationIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        cid = request.headers.get("X-Correlation-ID") or str(uuid4())
+        request.state.correlation_id = cid
+        response: Response = await call_next(request)
+        response.headers["X-Correlation-ID"] = cid
+        return response
+
+
+class ContentLengthLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        cl = request.headers.get("content-length")
+        if cl and cl.isdigit() and int(cl) > settings.MAX_CONTENT_LENGTH:
+            return problem_json(
+                status=413,
+                title="Payload Too Large",
+                detail=f"Body exceeds limit {settings.MAX_CONTENT_LENGTH} bytes",
+                request=request,
+                type_url="about:blank",
+            )
+        return await call_next(request)
+
+
+def problem_json(
+    *,
+    status: int,
+    title: str,
+    detail: str,
+    request: Request,
+    type_url: str = "about:blank",
+):
+    cid = getattr(request.state, "correlation_id", None) or str(uuid4())
+    return JSONResponse(
+        status_code=status,
+        media_type="application/problem+json",
+        content={
+            "type": type_url,
+            "title": title,
+            "status": status,
+            "detail": detail,
+            "correlation_id": cid,
+            "error": {"code": title, "message": detail},
+        },
+    )
+
+
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(ContentLengthLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class ApiError(Exception):
@@ -30,18 +90,24 @@ class ApiError(Exception):
 
 @app.exception_handler(ApiError)
 async def api_error_handler(request: Request, exc: ApiError):
-    return JSONResponse(
-        status_code=exc.status,
-        content={"error": {"code": exc.code, "message": exc.message}},
+    return problem_json(
+        status=exc.status,
+        title=exc.code,
+        detail=exc.message,
+        request=request,
+        type_url="about:blank",
     )
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     detail = exc.detail if isinstance(exc.detail, str) else "http_error"
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": {"code": "http_error", "message": detail}},
+    return problem_json(
+        status=exc.status_code,
+        title="http_error",
+        detail=detail,
+        request=request,
+        type_url="about:blank",
     )
 
 
