@@ -18,7 +18,9 @@ def test_problem_json_with_correlation_id():
 
 
 def test_settings_load_from_env(monkeypatch):
-    monkeypatch.setenv("ALLOWED_ORIGINS", '["http://localhost:3000","http://example.com"]')
+    monkeypatch.setenv(
+        "ALLOWED_ORIGINS", '["http://localhost:3000","http://example.com"]'
+    )
     s = Settings()
     assert "http://example.com" in s.ALLOWED_ORIGINS
 
