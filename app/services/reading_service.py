@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from sqlalchemy.orm import Session
 
 from app.models.reading import ReadingItemModel
@@ -34,10 +32,10 @@ def create_item(db: Session, payload: ReadingItemCreate) -> ReadingItem:
 
 def list_items(
     db: Session,
-    status: Optional[Status] = None,
-    tag: Optional[str] = None,
-    q: Optional[str] = None,
-) -> List[ReadingItem]:
+    status: Status | None = None,
+    tag: str | None = None,
+    q: str | None = None,
+) -> list[ReadingItem]:
     query = db.query(ReadingItemModel)
 
     if status is not None:
