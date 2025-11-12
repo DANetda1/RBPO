@@ -6,8 +6,11 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+from app.logging_config import setup_logging
 from app.reading import router as reading_router
 from app.settings import get_settings
+
+logger = setup_logging()
 
 app = FastAPI(title="SecDev Course App", version="0.1.0")
 settings = get_settings()
@@ -90,6 +93,11 @@ class ApiError(Exception):
 
 @app.exception_handler(ApiError)
 async def api_error_handler(request: Request, exc: ApiError):
+    cid = getattr(request.state, "correlation_id", None)
+    logger.warning(
+        f"ApiError: {exc.code} - {exc.message}",
+        extra={"correlation_id": cid, "status": exc.status},
+    )
     return problem_json(
         status=exc.status,
         title=exc.code,
@@ -101,11 +109,33 @@ async def api_error_handler(request: Request, exc: ApiError):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
+    cid = getattr(request.state, "correlation_id", None)
     detail = exc.detail if isinstance(exc.detail, str) else "http_error"
+    logger.warning(
+        f"HTTPException: {exc.status_code} - {detail}",
+        extra={"correlation_id": cid, "status": exc.status_code},
+    )
     return problem_json(
         status=exc.status_code,
         title="http_error",
         detail=detail,
+        request=request,
+        type_url="about:blank",
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    cid = getattr(request.state, "correlation_id", None)
+    logger.error(
+        f"Unhandled exception: {type(exc).__name__}",
+        exc_info=True,
+        extra={"correlation_id": cid},
+    )
+    return problem_json(
+        status=500,
+        title="internal_error",
+        detail="An internal error occurred",
         request=request,
         type_url="about:blank",
     )

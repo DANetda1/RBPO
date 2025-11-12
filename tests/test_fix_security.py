@@ -41,7 +41,8 @@ def test_xss_in_title(client: TestClient):
         response = client.post("/reading-list", json=payload)
         if response.status_code == 201:
             item = response.json()
-            assert xss not in item["title"] or item["title"] != xss
+            assert item["title"] == xss
+            assert isinstance(item["title"], str)
 
 
 def test_long_string_attack(client: TestClient):

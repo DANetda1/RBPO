@@ -26,7 +26,7 @@ class SafeFormatter(logging.Formatter):
         return super().format(record)
 
 
-def setup_logging() -> None:
+def setup_logging() -> logging.Logger:
     handler = logging.StreamHandler()
     handler.setFormatter(
         SafeFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
