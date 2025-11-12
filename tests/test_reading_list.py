@@ -1,11 +1,4 @@
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-client = TestClient(app)
-
-
-def test_create_and_get():
+def test_create_and_get(client):
     payload = {
         "title": "Clean Architecture",
         "url": "https://example.com/ca",
@@ -22,7 +15,7 @@ def test_create_and_get():
     assert r2.json()["title"] == "Clean Architecture"
 
 
-def test_list_and_filters():
+def test_list_and_filters(client):
     client.post(
         "/reading-list",
         json={"title": "DDD Quickly", "tags": ["domain"], "priority": 3},
@@ -40,7 +33,7 @@ def test_list_and_filters():
     assert all("intro" in i["title"].lower() for i in r3.json())
 
 
-def test_update_status_and_delete():
+def test_update_status_and_delete(client):
     r = client.post("/reading-list", json={"title": "Refactoring"})
     item = r.json()
     r2 = client.patch(
@@ -55,6 +48,6 @@ def test_update_status_and_delete():
     assert r4.status_code == 404
 
 
-def test_validation():
+def test_validation(client):
     r = client.post("/reading-list", json={"title": ""})
     assert r.status_code == 422
