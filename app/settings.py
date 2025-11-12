@@ -15,6 +15,10 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:3000"]
     )
 
+    DATABASE_URL: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/reading_list"
+    )
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_origins(cls, v):
