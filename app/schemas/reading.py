@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, HttpUrl, conint, constr
 
@@ -17,8 +16,8 @@ PriorityInt = conint(ge=1, le=5)
 
 class ReadingItemBase(BaseModel):
     title: TitleStr
-    url: Optional[HttpUrl] = None
-    tags: List[TagStr] = []
+    url: HttpUrl | None = None
+    tags: list[TagStr] = []
     priority: PriorityInt = 3
 
 
@@ -27,11 +26,11 @@ class ReadingItemCreate(ReadingItemBase):
 
 
 class ReadingItemUpdate(BaseModel):
-    title: Optional[TitleStr] = None
-    url: Optional[HttpUrl] = None
-    tags: Optional[List[TagStr]] = None
-    priority: Optional[PriorityInt] = None
-    status: Optional[Status] = None
+    title: TitleStr | None = None
+    url: HttpUrl | None = None
+    tags: list[TagStr] | None = None
+    priority: PriorityInt | None = None
+    status: Status | None = None
 
 
 class ReadingItem(ReadingItemBase):
