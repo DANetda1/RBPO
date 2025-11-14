@@ -34,5 +34,14 @@ jobs:
       - name: Tests
         run: pytest -q
 
+      - name: Build Docker image
+        run: docker build --target runtime -t secdev-app:ci .
+
+      - name: Prepare env file for compose
+        run: cp env.example .env
+
+      - name: Validate docker compose stack
+        run: docker compose -f docker-compose.yml config
+
       - name: Pre-commit (all files)
         run: pre-commit run --all-files
