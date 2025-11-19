@@ -171,7 +171,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: railway-staging
-      url: https://railway.app
+      url: https://rbpo-production.up.railway.app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -179,11 +179,19 @@ jobs:
       - name: Setup Railway CLI
         run: |
           curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
       - name: Deploy to Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           railway login --token $RAILWAY_TOKEN
-          railway up --service ${{ secrets.RAILWAY_SERVICE_ID || 'backend' }}
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway up --detach
+        continue-on-error: true
+
+      - name: Verify deployment
+        run: |
+          sleep 10
+          curl -f https://rbpo-production.up.railway.app/health || exit 1
         continue-on-error: true
