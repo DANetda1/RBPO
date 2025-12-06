@@ -1,0 +1,79 @@
+# Custom Semgrep rules for Reading List API project
+
+rules:
+  - id: py-unsafe-html-echo
+    languages: [python]
+    message: "Потенциально небезопасный вывод пользовательских данных в HTMLResponse"
+    severity: WARNING
+    patterns:
+      - pattern: |
+          HTMLResponse(f"...{$X}...")
+    metadata:
+      category: security
+      cwe: "CWE-79: Cross-site Scripting"
+
+  - id: py-sql-injection-risk
+    languages: [python]
+    message: "Потенциальный риск SQL injection - использование строковой конкатенации в SQL-запросах"
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              execute(f"SELECT ... {$X} ...")
+          - pattern: |
+              execute("SELECT ... " + $X + " ...")
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+
+  - id: py-hardcoded-secrets
+    languages: [python]
+    message: "Обнаружен потенциально хардкодный секрет (password, token, key)"
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR = "..."password"..."
+          - pattern: |
+              $VAR = "..."token"..."
+          - pattern: |
+              $VAR = "..."secret"..."
+          - pattern: |
+              $VAR = "..."key"..."
+              ...
+          - pattern: |
+              password = "..."
+              ...
+          - pattern: |
+              api_key = "..."
+              ...
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  - id: py-unsafe-deserialization
+    languages: [python]
+    message: "Небезопасная десериализация может привести к выполнению произвольного кода"
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              pickle.loads($X)
+          - pattern: |
+              yaml.load($X)
+          - pattern: |
+              eval($X)
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+
+  - id: py-insecure-random
+    languages: [python]
+    message: "Использование небезопасного генератора случайных чисел для криптографических целей"
+    severity: WARNING
+    patterns:
+      - pattern: |
+          random.$METHOD($X)
+    metadata:
+      category: security
+      cwe: "CWE-330: Use of Insufficiently Random Values"

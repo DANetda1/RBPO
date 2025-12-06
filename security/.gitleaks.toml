@@ -1,0 +1,24 @@
+# Gitleaks configuration for Reading List API project
+
+title = "Reading List API - Gitleaks config"
+
+[extend]
+# Используем встроенные правила по умолчанию
+
+[allowlist]
+description = "Ignore non-sensitive patterns and test data"
+paths = [
+  "EVIDENCE/",   # отчёты и артефакты
+  "tests/",      # тестовые данные
+  "*.md",        # документация
+  "docs/",       # документация
+]
+
+commits = []
+
+regexes = [
+  '''TEST_SECRET_DO_NOT_USE''',
+  '''example\.com''',
+  '''localhost''',
+  '''127\.0\.0\.1''',
+]
