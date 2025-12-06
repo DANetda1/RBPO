@@ -1,0 +1,100 @@
+name: Security - SBOM & SCA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "**/*.py"
+      - "requirements*.txt"
+      - ".github/workflows/ci-sbom-sca.yml"
+  pull_request:
+    paths:
+      - "**/*.py"
+      - "requirements*.txt"
+      - ".github/workflows/ci-sbom-sca.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom_sca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure evidence dirs
+        run: mkdir -p EVIDENCE/P09
+
+      - name: Generate SBOM (Syft CycloneDX)
+        id: sbom
+        run: |
+          docker run --rm \
+            -v $PWD:/work \
+            -w /work \
+            anchore/syft:latest \
+            packages dir:. -o cyclonedx-json > EVIDENCE/P09/sbom.json
+
+          # Добавляем метаданные о коммите и workflow run
+          echo "SBOM generated for commit: ${{ github.sha }}" >> EVIDENCE/P09/sbom_metadata.txt
+          echo "Workflow run: ${{ github.run_id }}" >> EVIDENCE/P09/sbom_metadata.txt
+          echo "Branch: ${{ github.ref_name }}" >> EVIDENCE/P09/sbom_metadata.txt
+          echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> EVIDENCE/P09/sbom_metadata.txt
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: SCA Scan (Grype)
+        id: sca
+        run: |
+          set -e
+          docker run --rm \
+            -v $PWD:/work \
+            -w /work \
+            anchore/grype:latest \
+            sbom:/work/EVIDENCE/P09/sbom.json -o json > EVIDENCE/P09/sca_report.json
+
+          # Генерируем сводку с детализацией
+          echo "# SCA Summary" > EVIDENCE/P09/sca_summary.md
+          echo "" >> EVIDENCE/P09/sca_summary.md
+          echo "Generated for commit: \`${{ github.sha }}\`" >> EVIDENCE/P09/sca_summary.md
+          echo "Workflow run: [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> EVIDENCE/P09/sca_summary.md
+          echo "Branch: \`${{ github.ref_name }}\`" >> EVIDENCE/P09/sca_summary.md
+          echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> EVIDENCE/P09/sca_summary.md
+          echo "" >> EVIDENCE/P09/sca_summary.md
+
+          # Статистика по severity
+          echo "## Vulnerability Statistics" >> EVIDENCE/P09/sca_summary.md
+          echo "" >> EVIDENCE/P09/sca_summary.md
+          jq '[.matches[].vulnerability.severity] | group_by(.) | map({(.[0]): length}) | add' \
+            EVIDENCE/P09/sca_report.json >> EVIDENCE/P09/sca_summary.md || echo "No vulnerabilities found" >> EVIDENCE/P09/sca_summary.md
+          echo "" >> EVIDENCE/P09/sca_summary.md
+
+          # Ключевые находки (Critical/High)
+          echo "## Critical & High Severity Vulnerabilities" >> EVIDENCE/P09/sca_summary.md
+          echo "" >> EVIDENCE/P09/sca_summary.md
+          jq -r '.matches[] | select(.vulnerability.severity == "Critical" or .vulnerability.severity == "High") | "- **\(.vulnerability.id)** in `\(.artifact.name)@\(.artifact.version)` (severity: \(.vulnerability.severity))"' \
+            EVIDENCE/P09/sca_report.json | head -20 >> EVIDENCE/P09/sca_summary.md || echo "No Critical/High vulnerabilities found" >> EVIDENCE/P09/sca_summary.md
+          echo "" >> EVIDENCE/P09/sca_summary.md
+
+          # План действий
+          echo "## Action Plan" >> EVIDENCE/P09/sca_summary.md
+          echo "" >> EVIDENCE/P09/sca_summary.md
+          echo "1. Review Critical and High severity vulnerabilities above" >> EVIDENCE/P09/sca_summary.md
+          echo "2. Check if fixes are available (update dependencies)" >> EVIDENCE/P09/sca_summary.md
+          echo "3. For vulnerabilities that cannot be fixed immediately, create waivers in \`policy/waivers.yml\`" >> EVIDENCE/P09/sca_summary.md
+          echo "4. Re-run this workflow after fixes/waivers to verify" >> EVIDENCE/P09/sca_summary.md
+
+      - name: Upload SBOM/SCA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P09_EVIDENCE_${{ github.run_id }}_${{ github.sha }}
+          path: EVIDENCE/P09
+          retention-days: 90
