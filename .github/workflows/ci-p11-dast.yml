@@ -97,13 +97,22 @@ jobs:
           curl -v http://localhost:8000/docs || echo "App docs check failed"
 
           echo "Running ZAP baseline scan..."
-          docker run --rm --network host -v "$PWD:/zap/wrk" -w /zap/wrk ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+          docker run --rm --network host -v "$PWD:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            /zap/zap-baseline.py \
               -t http://localhost:8000 \
               -r /zap/wrk/EVIDENCE/P11/zap_baseline.html \
               -J /zap/wrk/EVIDENCE/P11/zap_baseline.json \
               -I \
               -j \
-              -d || echo "ZAP scan completed with warnings/errors"
+              -d 2>&1 | tee /tmp/zap_output.log || true
+
+          echo "=== ZAP output (last 100 lines) ==="
+          tail -100 /tmp/zap_output.log || echo "No ZAP output log"
+          echo "=== End of ZAP output ==="
+
+          echo "Checking files immediately after ZAP run:"
+          ls -la EVIDENCE/P11/ || echo "Directory check failed"
 
           echo "Checking for generated files in EVIDENCE/P11/:"
           ls -la EVIDENCE/P11/ || echo "Directory is empty"
@@ -113,7 +122,7 @@ jobs:
             ls -la zap_baseline.* 2>/dev/null || echo "No files in current directory"
             find . -name "zap_baseline.*" -type f 2>/dev/null || echo "No zap_baseline files found anywhere"
             echo "Checking if files were created in /zap/wrk:"
-            docker run --rm --network host -v "$PWD:/zap/wrk" -w /zap/wrk ghcr.io/zaproxy/zaproxy:stable \
+            docker run --rm --network host -v "$PWD:/zap/wrk/:rw" -w /zap/wrk ghcr.io/zaproxy/zaproxy:stable \
               ls -la /zap/wrk/zap_baseline.* 2>/dev/null || echo "No files in /zap/wrk"
           fi
 
