@@ -1,6 +1,6 @@
 # Hadolint configuration for Reading List API project
 
-# Правила, которые игнорируются (если нужно)
+# Правилa, которые игнорируются (если нужно)
 ignored:
   # Пример: если используем latest для конкретного случая
   # - DL3007
