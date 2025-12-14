@@ -58,110 +58,71 @@ jobs:
             sleep 1
           done
 
-      - name: Run app
+      - name: Run app and ZAP Baseline
         env:
           DATABASE_URL: postgresql://secdev:secdev@localhost:5432/reading_list
         run: |
+          # Запускаем приложение в фоне
           echo "Starting application..."
           export DATABASE_URL="postgresql://secdev:secdev@localhost:5432/reading_list"
           uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/app.log 2>&1 &
           APP_PID=$!
-          echo "App PID: $APP_PID"
-          echo "Waiting for app to start..."
+          echo "App started with PID: $APP_PID"
+
+          # Ждём готовности приложения
+          echo "Waiting for app to be ready..."
           for i in {1..30}; do
             if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
               echo "App is ready!"
-              curl -v http://localhost:8000/health
-              echo "Testing app endpoints..."
-              curl -s http://localhost:8000/docs | head -20 || echo "Docs endpoint check"
-              sleep 3
               break
             fi
-            echo "Attempt $i/30: waiting..."
+            echo "Attempt $i/30: waiting for app..."
             sleep 1
           done
+
           if ! curl -sf http://localhost:8000/health > /dev/null 2>&1; then
             echo "App failed to start. Logs:"
             cat /tmp/app.log
             exit 1
           fi
-          echo "App is confirmed running and accessible"
 
-      - name: ZAP Baseline
-        run: |
+          # Запускаем ZAP baseline
           echo "Starting ZAP baseline scan..."
-          echo "Current directory: $(pwd)"
-          echo "EVIDENCE/P11 exists: $(test -d EVIDENCE/P11 && echo 'yes' || echo 'no')"
-          echo "Verifying app is accessible before ZAP scan..."
-          curl -v http://localhost:8000/health || echo "App health check failed"
-          curl -v http://localhost:8000/docs || echo "App docs check failed"
+          set +e
 
-          echo "Running ZAP baseline scan..."
-          docker run --rm --network host -v "$PWD:/zap/wrk/:rw" \
-            ghcr.io/zaproxy/zaproxy:stable \
-            /zap/zap-baseline.py \
+          docker run --rm --network host --user root -v $PWD:/zap/wrk/:rw -w /zap/wrk \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
               -t http://localhost:8000 \
-              -r /zap/wrk/EVIDENCE/P11/zap_baseline.html \
-              -J /zap/wrk/EVIDENCE/P11/zap_baseline.json \
+              -r zap_baseline.html \
+              -J zap_baseline.json \
+              -m 5 \
               -I \
-              -j \
               -d 2>&1 | tee /tmp/zap_output.log || true
 
-          echo "=== ZAP output (last 100 lines) ==="
-          tail -100 /tmp/zap_output.log || echo "No ZAP output log"
-          echo "=== End of ZAP output ==="
+          set -e
 
-          echo "Checking files immediately after ZAP run:"
-          ls -la EVIDENCE/P11/ || echo "Directory check failed"
+          # Проверяем код возврата
+          ZAP_EXIT_CODE=${PIPESTATUS[0]}
+          echo "ZAP exit code: $ZAP_EXIT_CODE"
 
-          echo "Checking for generated files in EVIDENCE/P11/:"
-          ls -la EVIDENCE/P11/ || echo "Directory is empty"
+          # Останавливаем приложение
+          echo "Stopping app..."
+          kill $APP_PID 2>/dev/null || true
+          sleep 2
 
-          if [ ! -f EVIDENCE/P11/zap_baseline.html ] && [ ! -f EVIDENCE/P11/zap_baseline.json ]; then
-            echo "WARNING: ZAP did not create files. Checking current directory..."
-            ls -la zap_baseline.* 2>/dev/null || echo "No files in current directory"
-            find . -name "zap_baseline.*" -type f 2>/dev/null || echo "No zap_baseline files found anywhere"
-            echo "Checking if files were created in /zap/wrk:"
-            docker run --rm --network host -v "$PWD:/zap/wrk/:rw" -w /zap/wrk ghcr.io/zaproxy/zaproxy:stable \
-              ls -la /zap/wrk/zap_baseline.* 2>/dev/null || echo "No files in /zap/wrk"
+          # Перемещаем файлы отчётов в EVIDENCE/P11
+          if [ -f zap_baseline.html ]; then
+            mv zap_baseline.html EVIDENCE/P11/ || true
+            echo "HTML report moved to EVIDENCE/P11/"
+          fi
+
+          if [ -f zap_baseline.json ]; then
+            mv zap_baseline.json EVIDENCE/P11/ || true
+            echo "JSON report moved to EVIDENCE/P11/"
           fi
 
           echo "Final contents of EVIDENCE/P11/:"
-          ls -la EVIDENCE/P11/ || echo "Directory does not exist"
-
-      - name: Ensure evidence files exist
-        if: always()
-        run: |
-          mkdir -p EVIDENCE/P11
-
-          # Check if files exist, if not try to find them elsewhere
-          if [ ! -f EVIDENCE/P11/zap_baseline.html ]; then
-            echo "HTML file not found in EVIDENCE/P11/, searching..."
-            if [ -f zap_baseline.html ]; then
-              echo "Found zap_baseline.html in current directory, moving..."
-              mv zap_baseline.html EVIDENCE/P11/
-            fi
-          fi
-
-          if [ ! -f EVIDENCE/P11/zap_baseline.json ]; then
-            echo "JSON file not found in EVIDENCE/P11/, searching..."
-            if [ -f zap_baseline.json ]; then
-              echo "Found zap_baseline.json in current directory, moving..."
-              mv zap_baseline.json EVIDENCE/P11/
-            fi
-          fi
-
-          # Only create placeholders if files still don't exist
-          if [ ! -f EVIDENCE/P11/zap_baseline.html ] && [ ! -f EVIDENCE/P11/zap_baseline.json ]; then
-            echo "WARNING: ZAP did not generate reports. Creating placeholder files."
-            echo "ZAP scan completed but no reports were generated. Check ZAP logs above." > EVIDENCE/P11/zap_baseline.html
-            echo '{"status": "no_reports", "message": "ZAP did not generate reports. Check workflow logs."}' > EVIDENCE/P11/zap_baseline.json
-          fi
-
-          echo "Final check - files in EVIDENCE/P11/:"
-          ls -la EVIDENCE/P11/
-          test -f EVIDENCE/P11/zap_baseline.html && echo "HTML report exists" || echo "HTML report missing"
-          test -f EVIDENCE/P11/zap_baseline.json && echo "JSON report exists" || echo "JSON report missing"
+          ls -la EVIDENCE/P11/ || echo "Directory is empty"
 
       - name: Cleanup
         if: always()
