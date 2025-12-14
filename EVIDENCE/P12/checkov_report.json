@@ -1,0 +1,82 @@
+Unable to find image 'bridgecrew/checkov:latest' locally
+latest: Pulling from bridgecrew/checkov
+0e4bc2bd6656: Pulling fs layer
+22b63e76fde1: Pulling fs layer
+b3dd773c3296: Pulling fs layer
+1771569cc129: Pulling fs layer
+24ee49b6eccf: Pulling fs layer
+e493ee3bf4e4: Pulling fs layer
+a88b025f9a88: Pulling fs layer
+c773ac00d371: Pulling fs layer
+13a7011ba4ec: Pulling fs layer
+1771569cc129: Waiting
+a88b025f9a88: Waiting
+c773ac00d371: Waiting
+24ee49b6eccf: Waiting
+e493ee3bf4e4: Waiting
+13a7011ba4ec: Waiting
+22b63e76fde1: Verifying Checksum
+22b63e76fde1: Download complete
+1771569cc129: Verifying Checksum
+1771569cc129: Download complete
+b3dd773c3296: Verifying Checksum
+b3dd773c3296: Download complete
+0e4bc2bd6656: Verifying Checksum
+0e4bc2bd6656: Download complete
+a88b025f9a88: Verifying Checksum
+a88b025f9a88: Download complete
+c773ac00d371: Verifying Checksum
+c773ac00d371: Download complete
+13a7011ba4ec: Download complete
+24ee49b6eccf: Verifying Checksum
+24ee49b6eccf: Download complete
+0e4bc2bd6656: Pull complete
+e493ee3bf4e4: Download complete
+22b63e76fde1: Pull complete
+b3dd773c3296: Pull complete
+1771569cc129: Pull complete
+24ee49b6eccf: Pull complete
+e493ee3bf4e4: Pull complete
+a88b025f9a88: Pull complete
+c773ac00d371: Pull complete
+13a7011ba4ec: Pull complete
+Digest: sha256:4c2c3b67f09867ef2843a03d8ba82adf712eb93ea3584c1708c24ed584f6da17
+Status: Downloaded newer image for bridgecrew/checkov:latest
+usage: checkov [-h] [-v] [--support] [-d DIRECTORY] [--add-check]
+               [-f FILE [FILE ...]] [--skip-path SKIP_PATH]
+               [--external-checks-dir EXTERNAL_CHECKS_DIR]
+               [--external-checks-git EXTERNAL_CHECKS_GIT] [-l]
+               [-o {cli,csv,cyclonedx,cyclonedx_json,json,junitxml,github_failed_only,gitlab_sast,sarif,spdx}]
+               [--output-file-path OUTPUT_FILE_PATH] [--output-bc-ids]
+               [--include-all-checkov-policies] [--quiet] [--compact]
+               [--framework FRAMEWORK [FRAMEWORK ...]]
+               [--skip-framework SKIP_FRAMEWORK [SKIP_FRAMEWORK ...]]
+               [-c CHECK] [--skip-check SKIP_CHECK]
+               [--run-all-external-checks] [-s] [--soft-fail-on SOFT_FAIL_ON]
+               [--hard-fail-on HARD_FAIL_ON] [--bc-api-key BC_API_KEY]
+               [--prisma-api-url PRISMA_API_URL] [--skip-results-upload]
+               [--docker-image DOCKER_IMAGE]
+               [--dockerfile-path DOCKERFILE_PATH] [--repo-id REPO_ID]
+               [-b BRANCH] [--skip-download] [--use-enforcement-rules]
+               [--download-external-modules DOWNLOAD_EXTERNAL_MODULES]
+               [--var-file VAR_FILE]
+               [--external-modules-download-path EXTERNAL_MODULES_DOWNLOAD_PATH]
+               [--evaluate-variables EVALUATE_VARIABLES] [-ca CA_CERTIFICATE]
+               [--no-cert-verify]
+               [--repo-root-for-plan-enrichment REPO_ROOT_FOR_PLAN_ENRICHMENT]
+               [--config-file CONFIG_FILE] [--create-config CREATE_CONFIG]
+               [--show-config] [--create-baseline] [--baseline BASELINE]
+               [--output-baseline-as-skipped]
+               [--skip-cve-package SKIP_CVE_PACKAGE]
+               [--policy-metadata-filter POLICY_METADATA_FILTER]
+               [--policy-metadata-filter-exception POLICY_METADATA_FILTER_EXCEPTION]
+               [--secrets-scan-file-type SECRETS_SCAN_FILE_TYPE]
+               [--enable-secret-scan-all-files]
+               [--block-list-secret-scan BLOCK_LIST_SECRET_SCAN]
+               [--summary-position {bottom,top}]
+               [--skip-resources-without-violations] [--deep-analysis]
+               [--no-fail-on-crash] [--mask MASK] [--scan-secrets-history]
+               [--secrets-history-timeout SECRETS_HISTORY_TIMEOUT]
+               [--custom-tool-name CUSTOM_TOOL_NAME]
+checkov: error: Invalid frameworks specified: docker_compose.
+Valid values are: ansible, argo_workflows, arm, azure_pipelines, bicep, bitbucket_pipelines, cdk, circleci_pipelines, cloudformation, dockerfile, github_configuration, github_actions, gitlab_configuration, gitlab_ci, bitbucket_configuration, helm, json, yaml, kubernetes, kustomize, openapi, sca_package, sca_image, secrets, serverless, terraform, terraform_json, terraform_plan, sast, sast_python, sast_java, sast_javascript, sast_typescript, sast_golang, 3d_policy, all

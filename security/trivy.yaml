@@ -1,0 +1,13 @@
+# Trivy configuration for Reading List API project
+
+scan:
+  scanners:
+    - vuln
+    - config
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+    - LOW
+
+format: "json"

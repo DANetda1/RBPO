@@ -1,0 +1,9 @@
+Unable to find image 'hadolint/hadolint:latest' locally
+latest: Pulling from hadolint/hadolint
+14ae1c277c18: Pulling fs layer
+14ae1c277c18: Verifying Checksum
+14ae1c277c18: Download complete
+14ae1c277c18: Pull complete
+Digest: sha256:27086352fd5e1907ea2b934eb1023f217c5ae087992eb59fde121dce9c9ff21e
+Status: Downloaded newer image for hadolint/hadolint:latest
+[{"code":"DL3008","column":1,"file":"/work/Dockerfile","level":"warning","line":10,"message":"Pin versions in apt get install. Instead of `apt-get install <package>` use `apt-get install <package>=<version>`"},{"code":"DL3013","column":1,"file":"/work/Dockerfile","level":"warning","line":15,"message":"Pin versions in pip. Instead of `pip install <package>` use `pip install <package>==<version>` or `pip install --requirement <requirements file>`"},{"code":"DL3042","column":1,"file":"/work/Dockerfile","level":"warning","line":15,"message":"Avoid use of cache directory with pip. Use `pip install --no-cache-dir <package>`"}]

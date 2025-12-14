@@ -1,0 +1,16 @@
+# Checkov configuration for Reading List API project
+
+quiet: false
+compact: true
+
+framework:
+  - kubernetes
+  - dockerfile
+  - docker_compose
+
+# Правила, которые пропускаем (если нужно)
+skip-check: []
+
+# Пример:
+# skip-check:
+#   - CKV_K8S_9999
