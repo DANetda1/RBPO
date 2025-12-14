@@ -38,24 +38,77 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run app
+      - name: Start PostgreSQL
         run: |
-          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          docker stop postgres-test || true
+          docker rm postgres-test || true
+          docker run -d --name postgres-test \
+            -e POSTGRES_USER=secdev \
+            -e POSTGRES_PASSWORD=secdev \
+            -e POSTGRES_DB=reading_list \
+            -p 5432:5432 \
+            postgres:16.4-alpine
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if docker exec postgres-test pg_isready -U secdev > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 1
+          done
+
+      - name: Run app
+        env:
+          DATABASE_URL: postgresql://secdev:secdev@localhost:5432/reading_list
+        run: |
+          echo "Starting application..."
+          export DATABASE_URL="postgresql://secdev:secdev@localhost:5432/reading_list"
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/app.log 2>&1 &
+          APP_PID=$!
+          echo "App PID: $APP_PID"
           echo "Waiting for app to start..."
-          timeout 30 bash -c 'until curl -sf http://localhost:8000/health; do sleep 1; done'
-          echo "App is ready!"
-          sleep 2
-          curl -v http://localhost:8000/health || echo "Health check failed"
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "App is ready!"
+              curl -v http://localhost:8000/health
+              break
+            fi
+            echo "Attempt $i/30: waiting..."
+            sleep 1
+          done
+          if ! curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+            echo "App failed to start. Logs:"
+            cat /tmp/app.log
+            exit 1
+          fi
 
       - name: ZAP Baseline
         run: |
+          echo "Starting ZAP baseline scan..."
+          echo "Current directory: $(pwd)"
+          echo "EVIDENCE/P11 exists: $(test -d EVIDENCE/P11 && echo 'yes' || echo 'no')"
+
           docker run --rm --network host -v $PWD:/zap/wrk -w /zap/wrk owasp/zap2docker-stable \
             zap-baseline.py \
               -t http://localhost:8000 \
-              -r /zap/wrk/EVIDENCE/P11/zap_baseline.html \
-              -J /zap/wrk/EVIDENCE/P11/zap_baseline.json \
+              -r zap_baseline.html \
+              -J zap_baseline.json \
               -d || true
-          ls -la EVIDENCE/P11/ || echo "No files found"
+
+          echo "Checking for generated files..."
+          ls -la zap_baseline.* 2>/dev/null || echo "No zap_baseline files in current directory"
+
+          if [ -f zap_baseline.html ] || [ -f zap_baseline.json ]; then
+            echo "Moving files to EVIDENCE/P11/"
+            mv zap_baseline.* EVIDENCE/P11/ 2>/dev/null || true
+            echo "Files moved. Contents of EVIDENCE/P11/:"
+            ls -la EVIDENCE/P11/
+          else
+            echo "ERROR: ZAP did not generate any files!"
+            echo "Checking if app is still running..."
+            curl -v http://localhost:8000/health || echo "App is not responding"
+          fi
 
       - name: List evidence files
         if: always()
@@ -63,6 +116,13 @@ jobs:
           echo "Checking EVIDENCE/P11 directory:"
           ls -la EVIDENCE/P11/ || echo "Directory is empty or does not exist"
           find . -name "zap_baseline.*" -type f || echo "No zap_baseline files found"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop postgres-test || true
+          docker rm postgres-test || true
+          pkill -f uvicorn || true
 
       - name: Upload P11 evidence
         if: always()
