@@ -1,0 +1,12 @@
+# Hadolint configuration for Reading List API project
+
+# Правила, которые игнорируются (если нужно)
+ignored:
+  # Пример: если используем latest для конкретного случая
+  # - DL3007
+
+# Строгость правил
+failure-threshold: warning
+
+# Формат вывода
+format: json
