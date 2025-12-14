@@ -41,22 +41,34 @@ jobs:
       - name: Run app
         run: |
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          echo "Waiting for app to start..."
           timeout 30 bash -c 'until curl -sf http://localhost:8000/health; do sleep 1; done'
+          echo "App is ready!"
+          sleep 2
+          curl -v http://localhost:8000/health || echo "Health check failed"
 
       - name: ZAP Baseline
         run: |
-          docker run --rm --network host -v $PWD:/zap/wrk owasp/zap2docker-stable \
+          docker run --rm --network host -v $PWD:/zap/wrk -w /zap/wrk owasp/zap2docker-stable \
             zap-baseline.py \
               -t http://localhost:8000 \
-              -r zap_baseline.html \
-              -J zap_baseline.json \
+              -r /zap/wrk/EVIDENCE/P11/zap_baseline.html \
+              -J /zap/wrk/EVIDENCE/P11/zap_baseline.json \
               -d || true
-          mv zap_baseline.* EVIDENCE/P11/ || true
+          ls -la EVIDENCE/P11/ || echo "No files found"
+
+      - name: List evidence files
+        if: always()
+        run: |
+          echo "Checking EVIDENCE/P11 directory:"
+          ls -la EVIDENCE/P11/ || echo "Directory is empty or does not exist"
+          find . -name "zap_baseline.*" -type f || echo "No zap_baseline files found"
 
       - name: Upload P11 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: P11_EVIDENCE_${{ github.run_id }}_${{ github.sha }}
-          path: EVIDENCE/P11
+          path: EVIDENCE/P11/
           retention-days: 90
+          if-no-files-found: warn
