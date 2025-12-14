@@ -97,8 +97,7 @@ jobs:
           curl -v http://localhost:8000/docs || echo "App docs check failed"
 
           echo "Running ZAP baseline scan..."
-          docker run --rm --network host -v "$PWD:/zap/wrk" -w /zap/wrk owasp/zap2docker-stable \
-            zap-baseline.py \
+          docker run --rm --network host -v "$PWD:/zap/wrk" -w /zap/wrk ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
               -t http://localhost:8000 \
               -r /zap/wrk/EVIDENCE/P11/zap_baseline.html \
               -J /zap/wrk/EVIDENCE/P11/zap_baseline.json \
@@ -114,7 +113,7 @@ jobs:
             ls -la zap_baseline.* 2>/dev/null || echo "No files in current directory"
             find . -name "zap_baseline.*" -type f 2>/dev/null || echo "No zap_baseline files found anywhere"
             echo "Checking if files were created in /zap/wrk:"
-            docker run --rm --network host -v "$PWD:/zap/wrk" -w /zap/wrk owasp/zap2docker-stable \
+            docker run --rm --network host -v "$PWD:/zap/wrk" -w /zap/wrk ghcr.io/zaproxy/zaproxy:stable \
               ls -la /zap/wrk/zap_baseline.* 2>/dev/null || echo "No files in /zap/wrk"
           fi
 
