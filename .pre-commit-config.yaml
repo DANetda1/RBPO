@@ -6,9 +6,11 @@ repos:
         args: ['--branch', 'main', '--branch', 'master']
         stages: [push]
       - id: end-of-file-fixer
+        exclude: ^EVIDENCE/
       - id: trailing-whitespace
       - id: check-merge-conflict
       - id: check-json
+        exclude: ^EVIDENCE/
       - id: check-yaml
       - id: mixed-line-ending
 
